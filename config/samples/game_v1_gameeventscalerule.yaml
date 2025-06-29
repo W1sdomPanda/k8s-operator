@@ -1,11 +1,11 @@
 apiVersion: game.game.yourdomain.com/v1
 kind: GameEventScaleRule
 metadata:
-  name: main-game-event-scaler # Назва вашого правила масштабування
-  namespace: default            # Простір імен, де знаходиться ваш оператор та мікросервіси
+  name: main-game-event-scaler # name of the game event scaler
+  namespace: default            # namespace of the game event scaler
 spec:
   eventEndpointURL: "http://game-event-api.default.svc.cluster.local/api/events"
-  pollingInterval: "61s" # Опитувати ендпоїнт кожні 30 секунд
+  pollingInterval: "61s" # poll the event endpoint every 61 seconds
   rules:
     - eventType: "MassPvPEvent"
       targetMicroservice: "pvp-battle-service" # deployment name for scaling
