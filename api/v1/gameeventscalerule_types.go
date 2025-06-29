@@ -1,47 +1,47 @@
-/*
-Copyright 2025.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// EventScalingRule defines the scaling parameters for a specific game event type.
+type EventScalingRule struct {
+	EventType          string `json:"eventType"`          // Type of the game event (e.g., "MassPvPEvent")
+	TargetMicroservice string `json:"targetMicroservice"` // Name of the Deployment to scale
+	DesiredReplicas    int32  `json:"desiredReplicas"`    // Target replicas during the event
+	PreScaleMinutes    int32  `json:"preScaleMinutes"`    // Minutes before event start to scale up
+	PostScaleMinutes   int32  `json:"postScaleMinutes"`   // Minutes after event end to scale down
+	DefaultReplicas    int32  `json:"defaultReplicas"`    // Default replicas after event ends
+}
 
-// GameEventScaleRuleSpec defines the desired state of GameEventScaleRule.
+// GameEventScaleRuleSpec defines the desired state of GameEventScaleRule
 type GameEventScaleRuleSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of GameEventScaleRule. Edit gameeventscalerule_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	EventEndpointURL string             `json:"eventEndpointURL"` // URL to your game event API endpoint
+	PollingInterval  string             `json:"pollingInterval"`  // How often to poll the event endpoint (e.g., "1m", "30s")
+	Rules            []EventScalingRule `json:"rules"`            // List of scaling rules for different event types
 }
 
-// GameEventScaleRuleStatus defines the observed state of GameEventScaleRule.
+// GameEventScaleRuleStatus defines the observed state of GameEventScaleRule
 type GameEventScaleRuleStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	LastEventCheckTime *metav1.Time        `json:"lastEventCheckTime,omitempty"` // Timestamp of the last successful event endpoint check
+	ActiveScales       []ActiveScaleStatus `json:"activeScales,omitempty"`       // Currently active scaling operations
+	// Додайте інші поля статусу, якщо потрібно (наприклад, останнє масштабоване розгортання)
 }
 
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
+// ActiveScaleStatus represents the status of an ongoing scaling operation
+type ActiveScaleStatus struct {
+	EventType          string       `json:"eventType"`
+	TargetMicroservice string       `json:"targetMicroservice"`
+	ScaledToReplicas   int32        `json:"scaledToReplicas"`
+	ScaleTriggerTime   *metav1.Time `json:"scaleTriggerTime"`
+	EventEndTime       *metav1.Time `json:"eventEndTime"` // When the event is expected to finish
+	Status             string       `json:"status"`       // "ScalingUp", "Active", "ScalingDown", "Completed"
+}
 
-// GameEventScaleRule is the Schema for the gameeventscalerules API.
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
+
+// GameEventScaleRule is the Schema for the gameeventscalerules API
 type GameEventScaleRule struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -50,9 +50,9 @@ type GameEventScaleRule struct {
 	Status GameEventScaleRuleStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
+//+kubebuilder:object:root=true
 
-// GameEventScaleRuleList contains a list of GameEventScaleRule.
+// GameEventScaleRuleList contains a list of GameEventScaleRule
 type GameEventScaleRuleList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

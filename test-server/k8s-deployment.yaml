@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: game-event-api
+  namespace: default
+  labels:
+    app: game-event-api
+spec:
+  selector:
+    app: game-event-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: game-event-api
+  namespace: default
+  labels:
+    app: game-event-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: game-event-api
+  template:
+    metadata:
+      labels:
+        app: game-event-api
+    spec:
+      containers:
+      - name: game-event-api
+        image: game-event-api:latest
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5 

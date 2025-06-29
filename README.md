@@ -1,121 +1,312 @@
-# k8s-operator
-// TODO(user): Add simple overview of use/purpose
+# Game Event Scaler Operator
+
+Kubernetes operator for automatic scaling of microservices based on game events. The operator monitors external event APIs and automatically scales corresponding Deployments in the Kubernetes cluster.
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
 
-## Getting Started
+Game Event Scaler Operator is a Kubernetes operator that:
+- Periodically polls external APIs to retrieve game event information
+- Automatically scales microservices based on active events
+- Supports various event types (PvP, Raid Boss, etc.)
+- Provides detailed information about scaling status
+
+## Local Testing
 
 ### Prerequisites
-- go version v1.24.0+
-- docker version 17.03+.
-- kubectl version v1.11.3+.
-- Access to a Kubernetes v1.11.3+ cluster.
 
-### To Deploy on the cluster
-**Build and push your image to the location specified by `IMG`:**
+- Go 1.24+
+- Docker
+- kubectl
+- Kind (Kubernetes in Docker) - for local cluster
 
-```sh
-make docker-build docker-push IMG=<some-registry>/k8s-operator:tag
+### Installing Kind
+
+```bash
+# macOS
+brew install kind
+
+# Linux
+curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.29.0/kind-linux-amd64
+chmod +x ./kind
+sudo mv ./kind /usr/local/bin/kind
 ```
 
-**NOTE:** This image ought to be published in the personal registry you specified.
-And it is required to have access to pull the image from the working environment.
-Make sure you have the proper permission to the registry if the above commands don’t work.
+### Creating Local Cluster
 
-**Install the CRDs into the cluster:**
+```bash
+# Create Kind cluster
+kind create cluster --name k8s-operator-test
 
-```sh
+# Check cluster status
+kubectl cluster-info --context kind-k8s-operator-test
+```
+
+### Setting up the Operator
+
+1. **Install CRDs:**
+```bash
 make install
 ```
 
-**Deploy the Manager to the cluster with the image specified by `IMG`:**
-
-```sh
-make deploy IMG=<some-registry>/k8s-operator:tag
+2. **Build Docker image for operator:**
+```bash
+make docker-build IMG=controller:latest
 ```
 
-> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
-privileges or be logged in as admin.
-
-**Create instances of your solution**
-You can apply the samples (examples) from the config/sample:
-
-```sh
-kubectl apply -k config/samples/
+3. **Load image into Kind:**
+```bash
+kind load docker-image controller:latest --name k8s-operator-test
 ```
 
->**NOTE**: Ensure that the samples has default values to test it out.
-
-### To Uninstall
-**Delete the instances (CRs) from the cluster:**
-
-```sh
-kubectl delete -k config/samples/
+4. **Deploy operator:**
+```bash
+make deploy IMG=controller:latest
 ```
 
-**Delete the APIs(CRDs) from the cluster:**
+### Test API Server
 
-```sh
-make uninstall
+A simple HTTP server has been created to simulate the external events API for testing the operator.
+
+#### Test-server structure:
+
+```
+test-server/
+├── main.go              # HTTP server with /api/events endpoint
+├── Dockerfile           # Docker image for server
+└── k8s-deployment.yaml  # Kubernetes manifests
 ```
 
-**UnDeploy the controller from the cluster:**
+#### Deploy test server:
 
-```sh
+```bash
+# Build test server image
+cd test-server
+docker build -t game-event-api:latest .
+
+# Load into Kind
+cd ..
+kind load docker-image game-event-api:latest --name k8s-operator-test
+
+# Deploy server
+kubectl apply -f test-server/k8s-deployment.yaml
+```
+
+#### Verify test server operation:
+
+```bash
+# Check pod status
+kubectl get pods -l app=game-event-api
+
+# Check service
+kubectl get svc game-event-api
+
+# Test API from within cluster
+kubectl run -it --rm --restart=Never busybox --image=busybox:1.36 --namespace=default -- sh
+# Inside the pod:
+wget -qO- http://game-event-api.default.svc.cluster.local/api/events
+```
+
+### Configuring Custom Resource
+
+1. **Update endpoint URL in CR:**
+```yaml
+# config/samples/game_v1_gameeventscalerule.yaml
+spec:
+  eventEndpointURL: "http://game-event-api.default.svc.cluster.local/api/events"
+  # or use IP address:
+  # eventEndpointURL: "http://10.96.108.198/api/events"
+```
+
+2. **Apply CR:**
+```bash
+kubectl apply -f config/samples/game_v1_gameeventscalerule.yaml
+```
+
+3. **Restart operator:**
+```bash
+kubectl rollout restart deployment/k8s-operator-controller-manager -n k8s-operator-system
+```
+
+### Monitoring and Diagnostics
+
+#### View operator logs:
+
+```bash
+# Logs from all operator pods
+kubectl logs -n k8s-operator-system -l app.kubernetes.io/name=k8s-operator -f
+
+# Logs from specific pod
+kubectl get pods -n k8s-operator-system
+kubectl logs -n k8s-operator-system <pod-name>
+
+# Last 50 lines of logs
+kubectl logs -n k8s-operator-system -l app.kubernetes.io/name=k8s-operator --tail=50
+```
+
+#### Check resource status:
+
+```bash
+# GameEventScaleRule status
+kubectl get gameeventscalerules -A
+kubectl describe gameeventscalerule main-game-event-scaler -n default
+
+# Operator pod status
+kubectl get pods -n k8s-operator-system
+
+# Test server status
+kubectl get pods -l app=game-event-api
+kubectl get svc game-event-api
+
+# Cluster events
+kubectl get events --all-namespaces --sort-by='.lastTimestamp'
+```
+
+#### Check scaling:
+
+```bash
+# View Deployments being scaled
+kubectl get deployments -n default
+
+# Detailed Deployment information
+kubectl describe deployment <deployment-name> -n default
+```
+
+### Custom Resource Structure
+
+```yaml
+apiVersion: game.game.yourdomain.com/v1
+kind: GameEventScaleRule
+metadata:
+  name: main-game-event-scaler
+  namespace: default
+spec:
+  eventEndpointURL: "http://game-event-api.default.svc.cluster.local/api/events"
+  pollingInterval: "30s"
+  rules:
+  - eventType: "MassPvPEvent"
+    targetMicroservice: "pvp-battle-service"
+    defaultReplicas: 3
+    desiredReplicas: 20
+    preScaleMinutes: 5
+    postScaleMinutes: 10
+  - eventType: "RaidBossSpawn"
+    targetMicroservice: "raid-instance-manager"
+    defaultReplicas: 2
+    desiredReplicas: 15
+    preScaleMinutes: 3
+    postScaleMinutes: 5
+```
+
+### API Response Format
+
+The test server returns JSON in this format:
+
+```json
+[
+  {
+    "eventType": "MassPvPEvent",
+    "startTime": "2025-06-29T13:38:37Z",
+    "endTime": "2025-06-29T14:08:37Z",
+    "targetMicroservice": "pvp-battle-service"
+  },
+  {
+    "eventType": "RaidBossSpawn",
+    "startTime": "2025-06-29T13:53:37Z", 
+    "endTime": "2025-06-29T14:23:37Z",
+    "targetMicroservice": "raid-instance-manager"
+  }
+]
+```
+
+### Development
+
+#### Local operator run (without Docker):
+
+```bash
+# Run operator locally (connects to Kind cluster)
+make run
+```
+
+#### Testing changes:
+
+```bash
+# After code changes, rebuild image
+make docker-build IMG=controller:latest
+kind load docker-image controller:latest --name k8s-operator-test
+
+# Restart operator
+kubectl rollout restart deployment/k8s-operator-controller-manager -n k8s-operator-system
+```
+
+### Cleanup
+
+```bash
+# Remove test server
+kubectl delete -f test-server/k8s-deployment.yaml
+
+# Remove operator
 make undeploy
+
+# Remove CRDs
+make uninstall
+
+# Remove Kind cluster
+kind delete cluster --name k8s-operator-test
 ```
 
-## Project Distribution
+## Production Deployment
 
-Following the options to release and provide this solution to the users.
+### Build and publish image
 
-### By providing a bundle with all YAML files
+```bash
+# Build for multiple architectures
+make docker-buildx IMG=your-registry/game-scaler-operator:latest
 
-1. Build the installer for the image built and published in the registry:
-
-```sh
-make build-installer IMG=<some-registry>/k8s-operator:tag
+# Publish to registry
+make docker-push IMG=your-registry/game-scaler-operator:latest
 ```
 
-**NOTE:** The makefile target mentioned above generates an 'install.yaml'
-file in the dist directory. This file contains all the resources built
-with Kustomize, which are necessary to install this project without its
-dependencies.
+### Deploy to cluster
 
-2. Using the installer
-
-Users can just run 'kubectl apply -f <URL for YAML BUNDLE>' to install
-the project, i.e.:
-
-```sh
-kubectl apply -f https://raw.githubusercontent.com/<org>/k8s-operator/<tag or branch>/dist/install.yaml
+```bash
+# Deploy with your image
+make deploy IMG=your-registry/game-scaler-operator:latest
 ```
 
-### By providing a Helm Chart
+## Project Structure
 
-1. Build the chart using the optional helm plugin
-
-```sh
-kubebuilder edit --plugins=helm/v1-alpha
+```
+.
+├── api/                    # API definitions (CRD)
+├── cmd/                    # Operator entry point
+├── config/                 # Kubernetes manifests
+│   ├── crd/               # Custom Resource Definitions
+│   ├── samples/           # CR examples
+│   └── default/           # Operator deployment
+├── internal/              # Internal logic
+│   └── controller/        # Controllers
+├── test-server/           # Test HTTP server
+└── Makefile               # Build and deploy commands
 ```
 
-2. See that a chart was generated under 'dist/chart', and users
-can obtain this solution from there.
+## Troubleshooting
 
-**NOTE:** If you change the project, you need to update the Helm Chart
-using the same command above to sync the latest changes. Furthermore,
-if you create webhooks, you need to use the above command with
-the '--force' flag and manually ensure that any custom configuration
-previously added to 'dist/chart/values.yaml' or 'dist/chart/manager/manager.yaml'
-is manually re-applied afterwards.
+### Common issues:
 
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
+1. **ImagePullBackOff** - image not found in Kind
+   ```bash
+   kind load docker-image <image-name>:latest --name k8s-operator-test
+   ```
 
-**NOTE:** Run `make help` for more information on all potential `make` targets
+2. **DNS not resolving** - use full DNS name or IP
+   ```yaml
+   eventEndpointURL: "http://service-name.namespace.svc.cluster.local/api/events"
+   ```
 
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
+3. **Operator not seeing CR changes** - restart operator
+   ```bash
+   kubectl rollout restart deployment/k8s-operator-controller-manager -n k8s-operator-system
+   ```
 
 ## License
 

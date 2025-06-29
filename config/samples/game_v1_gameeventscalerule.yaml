@@ -1,9 +1,22 @@
 apiVersion: game.game.yourdomain.com/v1
 kind: GameEventScaleRule
 metadata:
-  labels:
-    app.kubernetes.io/name: k8s-operator
-    app.kubernetes.io/managed-by: kustomize
-  name: gameeventscalerule-sample
+  name: main-game-event-scaler # Назва вашого правила масштабування
+  namespace: default            # Простір імен, де знаходиться ваш оператор та мікросервіси
 spec:
-  # TODO(user): Add fields here
+  eventEndpointURL: "http://game-event-api.default.svc.cluster.local/api/events"
+  pollingInterval: "30s" # Опитувати ендпоїнт кожні 30 секунд
+  rules:
+    - eventType: "MassPvPEvent"
+      targetMicroservice: "pvp-battle-service" # Назва Deployment, який потрібно масштабувати
+      desiredReplicas: 20                       # Бажана кількість реплік під час івенту
+      preScaleMinutes: 5                        # Почати масштабування за 5 хвилин до івенту
+      postScaleMinutes: 10                      # Зменшити репліки через 10 хвилин після івенту
+      defaultReplicas: 3                        # Кількість реплік після завершення івенту
+
+    - eventType: "RaidBossSpawn"
+      targetMicroservice: "raid-instance-manager"
+      desiredReplicas: 15
+      preScaleMinutes: 3
+      postScaleMinutes: 5
+      defaultReplicas: 2
