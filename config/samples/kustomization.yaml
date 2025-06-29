@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- game_v1_gameeventscalerule.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples
