@@ -33,7 +33,7 @@ func handleEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Створюємо події з поточним часом
+	// Create events with current time
 	now := time.Now()
 	
 	events := []GameEvent{

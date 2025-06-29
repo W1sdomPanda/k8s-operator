@@ -15,8 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	gamev1 "game-scaler-operator/api/v1"       // Переконайтеся, що шлях правильний
-	"game-scaler-operator/internal/controller" // Переконайтеся, що шлях правильний
+	gamev1 "game-scaler-operator/api/v1"
+	"game-scaler-operator/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
 

@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	gamev1 "game-scaler-operator/api/v1" // Переконайтеся, що шлях правильний
+	gamev1 "game-scaler-operator/api/v1"
 )
 
 // EventAPIResponse represents the structure of the response from your game event API

@@ -25,7 +25,6 @@ type GameEventScaleRuleSpec struct {
 type GameEventScaleRuleStatus struct {
 	LastEventCheckTime *metav1.Time        `json:"lastEventCheckTime,omitempty"` // Timestamp of the last successful event endpoint check
 	ActiveScales       []ActiveScaleStatus `json:"activeScales,omitempty"`       // Currently active scaling operations
-	// Додайте інші поля статусу, якщо потрібно (наприклад, останнє масштабоване розгортання)
 }
 
 // ActiveScaleStatus represents the status of an ongoing scaling operation
