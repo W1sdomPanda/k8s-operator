@@ -34,6 +34,7 @@ spec:
       containers:
       - name: game-event-api
         image: game-event-api:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
         livenessProbe:

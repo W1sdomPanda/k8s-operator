@@ -5,14 +5,14 @@ metadata:
   namespace: default            # Простір імен, де знаходиться ваш оператор та мікросервіси
 spec:
   eventEndpointURL: "http://game-event-api.default.svc.cluster.local/api/events"
-  pollingInterval: "30s" # Опитувати ендпоїнт кожні 30 секунд
+  pollingInterval: "61s" # Опитувати ендпоїнт кожні 30 секунд
   rules:
     - eventType: "MassPvPEvent"
-      targetMicroservice: "pvp-battle-service" # Назва Deployment, який потрібно масштабувати
-      desiredReplicas: 20                       # Бажана кількість реплік під час івенту
-      preScaleMinutes: 5                        # Почати масштабування за 5 хвилин до івенту
-      postScaleMinutes: 10                      # Зменшити репліки через 10 хвилин після івенту
-      defaultReplicas: 3                        # Кількість реплік після завершення івенту
+      targetMicroservice: "pvp-battle-service" # deployment name for scaling
+      desiredReplicas: 20                       # Desired number of replicas during the event
+      preScaleMinutes: 1                        # Start scaling 1 minute before the event
+      postScaleMinutes: 10                      # Scale down replicas after 10 minutes after the event
+      defaultReplicas: 2                        # Number of replicas after the event
 
     - eventType: "RaidBossSpawn"
       targetMicroservice: "raid-instance-manager"

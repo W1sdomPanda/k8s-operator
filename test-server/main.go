@@ -39,14 +39,14 @@ func handleEvents(w http.ResponseWriter, r *http.Request) {
 	events := []GameEvent{
 		{
 			EventType:          "MassPvPEvent",
-			StartTime:          now.Format(time.RFC3339),
-			EndTime:            now.Add(30 * time.Minute).Format(time.RFC3339),
+			StartTime:          now.Add(-45 * time.Minute).Format(time.RFC3339),
+			EndTime:            now.Add(-15 * time.Minute).Format(time.RFC3339),
 			TargetMicroservice: "pvp-battle-service",
 		},
 		{
 			EventType:          "RaidBossSpawn",
-			StartTime:          now.Add(15 * time.Minute).Format(time.RFC3339),
-			EndTime:            now.Add(45 * time.Minute).Format(time.RFC3339),
+			StartTime:          now.Add(1 * time.Minute).Format(time.RFC3339),
+			EndTime:            now.Add(3 * time.Minute).Format(time.RFC3339),
 			TargetMicroservice: "raid-instance-manager",
 		},
 	}

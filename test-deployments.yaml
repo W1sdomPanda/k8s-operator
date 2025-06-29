@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pvp-battle-service
+  namespace: default
+  labels:
+    app: pvp-battle-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: pvp-battle-service
+  template:
+    metadata:
+      labels:
+        app: pvp-battle-service
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "10m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: raid-instance-manager
+  namespace: default
+  labels:
+    app: raid-instance-manager
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: raid-instance-manager
+  template:
+    metadata:
+      labels:
+        app: raid-instance-manager
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "10m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m" 
